@@ -1,0 +1,6 @@
+[submodule "client"]
+	path = client
+	url = git@bitbucket.org:Kkyyss/bc_vote_client.git
+[submodule "api_server"]
+	path = api_server
+	url = git@bitbucket.org:Kkyyss/bc_vote_services.git
