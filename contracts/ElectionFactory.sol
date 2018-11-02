@@ -1,6 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "./Election.sol";
+import './Type.sol';
 
 contract ElectionFactory {
   address[] public elections;
@@ -8,21 +9,19 @@ contract ElectionFactory {
   constructor () public {
   }
 
-  event electionCreated();
-  event startedElection();
-  event closedElection();
-  event votedEvent();
+  event electionCreated(address addr, string owner);
+  event closedElection(address addr, string owner);
+  event votedEvent(address addr);
 
   function createElection (
     bytes32 owner, bytes title, bool _public,
     bytes32[] candidates, bytes32[] voters,
-    bool manual, bool startNow,
-    uint start, uint end
+    bool manual, uint start, uint end
   ) public {
-    address addr = new Election(owner, title, _public, candidates, voters, manual, startNow, start, end);
+    address addr = new Election(owner, title, _public, candidates, voters, manual, start, end);
     elections.push(addr);
 
-    emit electionCreated();
+    emit electionCreated(addr, Type.bytes32ToStr(owner));
   }
 
   function getSize() public view returns (uint) {
@@ -44,6 +43,11 @@ contract ElectionFactory {
 
     return e.candSize();
   }
+  function getVoterSize(address addr) public view returns (uint) {
+    Election e = Election(addr);
+
+    return e.votrSize();
+  }
   function getVoterElectionAddress(bytes32 _email, uint i) public view returns (address, bool) {
     Election e = Election(elections[i]);
 
@@ -52,11 +56,6 @@ contract ElectionFactory {
     }
 
     if (e.isVoter(_email)) {
-      if (e.isManual()) {
-        if (e.getStatus() == 2) {
-          return (0, false);
-        }
-      }
       return (elections[i], true);
     }
     return (0, false);
@@ -91,7 +90,7 @@ contract ElectionFactory {
 
     e.vote(_email, _candidateId);
 
-    emit votedEvent();
+    emit votedEvent(addr);
   }
 
   function close(address addr, bytes32 _email) public {
@@ -99,14 +98,7 @@ contract ElectionFactory {
 
     e.close(_email);
 
-    emit closedElection();
-  }
-  function start(address addr, bytes32 _email) public {
-    Election e = Election(addr);
-
-    e.start(_email);
-
-    emit startedElection();
+    emit closedElection(addr, Type.bytes32ToStr(_email));
   }
   function getStartDate(address addr) public view returns (uint) {
     Election e = Election(addr);
@@ -118,23 +110,9 @@ contract ElectionFactory {
 
     return e.getEndDate();
   }
-  function getStatus(address addr) public view returns (uint) {
-    Election e = Election(addr);
-
-    return e.getStatus();
-  }
   function getMode(address addr) public view returns (uint) {
     Election e = Election(addr);
 
     return e.getMode();
   }
-  function isManual(address addr) public view returns (bool) {
-    Election e = Election(addr);
-
-    return e.isManual();
-  }
-  function getCurrentDateTime() public view returns (uint) {
-    return now;
-  }
 }
-

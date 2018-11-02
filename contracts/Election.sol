@@ -6,15 +6,12 @@ contract Election {
   mapping(bytes32 => uint) public ownerId;
   bytes32 private owner;
   bytes private title;
-  bool private manual;
   uint private startDate;
   uint private endDate;
   uint public candSize;
   uint public votrSize;
-  Status private status;
   Mode private mode;
 
-  enum Status { Start, Closed, Pending }
   enum Mode { Private, Public }
 
   mapping(uint => Candidate) private candidates;
@@ -38,14 +35,13 @@ contract Election {
   constructor (
     bytes32 _owner, bytes _title, bool _public,
     bytes32[] _candidates, bytes32[] _voters,
-    bool _manual, bool _startNow, uint _start, uint _end
+    bool _manualStop, uint _start, uint _end
   ) public {
     ownerId[_owner] = 1;
     owner = _owner;
     title = _title;
-    manual = _manual;
-    if (!manual) {
-      startDate = _start;
+    startDate = _start;
+    if (!_manualStop) {
       endDate = _end;
     }
     addCandidates(_candidates);
@@ -57,13 +53,6 @@ contract Election {
       mode = Mode.Public;
     }
 
-    status = Status.Pending;
-    if (_startNow) {
-      if (manual) {
-        status = Status.Start;
-      }
-      startDate = now;
-    }
   }
 
   function addCandidates(bytes32[] _names) private {
@@ -105,12 +94,9 @@ contract Election {
       }
     }
 
-    if (!manual) {
+    if (endDate != 0) {
       // Due date
       require(now < endDate);
-    } else {
-      // Event manually closed
-      require(status == Status.Start);
     }
 
     // require that they haven't voted before
@@ -145,38 +131,17 @@ contract Election {
   function close(bytes32 _email) public {
     require(ownerId[_email] != 0);
 
-    // Is manual mode and not closed
-    if (manual) {
-      require(status == Status.Start);
-      status = Status.Closed;
-    }
+    // Is manual close
+    require(endDate == 0);
 
     endDate = now;
   }
 
-  function start(bytes32 _email) public {
-    require(ownerId[_email] != 0);
-
-    if (manual) {
-      require(status == Status.Pending);
-      status = Status.Start;
-    }
-
-    startDate = now;
-  }
   function getStartDate() public view returns (uint) {
     return startDate;
   }
   function getEndDate() public view returns (uint) {
     return endDate;
-  }
-
-  function getStatus() public view returns (uint) {
-    require (manual);
-    return uint(status);
-  }
-  function isManual() public view returns (bool) {
-    return manual;
   }
   function getMode() public view returns (uint) {
     return uint(mode);
