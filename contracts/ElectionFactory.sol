@@ -1,9 +1,13 @@
 pragma solidity ^0.4.24;
+pragma experimental ABIEncoderV2;
 
 import "./Election.sol";
-import './Type.sol';
+import './Library.sol';
+import './strings.sol';
 
 contract ElectionFactory {
+  using strings for *;
+
   address[] public elections;
 
   constructor () public {
@@ -13,15 +17,30 @@ contract ElectionFactory {
   event closedElection(address addr, string owner);
   event votedEvent(address addr);
 
+  function getImgs(string _cImg) public pure returns (string[]) {
+    strings.slice memory s = _cImg.toSlice();
+    strings.slice memory delim = "|".toSlice();
+    string[] memory parts = new string[](s.count(delim) + 1);
+    for (uint i = 0; i < parts.length; i++) {
+      parts[i] = s.split(delim).toString();
+    }
+    return parts;
+  }
+
   function createElection (
-    bytes32 owner, bytes title, bool _public,
-    bytes32[] candidates, bytes32[] voters,
-    bool manual, uint start, uint end
+    bytes32[3] _content, bytes _imgURL, bool[2] _setup,
+    bytes32[] _candidates,
+    string _cImg,
+    bytes32[] _candidatesDescription,
+    bytes32[] voters, uint[2] _start_end
   ) public {
-    address addr = new Election(owner, title, _public, candidates, voters, manual, start, end);
+    address addr = new Election(
+      _content, _imgURL, _setup,
+      _candidates, getImgs(_cImg), _candidatesDescription,
+      voters, _start_end);
     elections.push(addr);
 
-    emit electionCreated(addr, Type.bytes32ToStr(owner));
+    emit electionCreated(addr, Library.bytes32ToStr(_content[0]));
   }
 
   function getSize() public view returns (uint) {
@@ -31,12 +50,17 @@ contract ElectionFactory {
   function getTitle(address addr) public view returns (string) {
     Election e = Election(addr);
 
-    return string(e.getTitle());
+    return e.getTitle();
+  }
+  function getContent(address addr) public view returns (string, string, string) {
+    Election e = Election(addr);
+
+    return (e.getTitle(), e.getImgURL(), e.getDescription());
   }
   function getOwner(address addr) public view returns (string) {
     Election e = Election(addr);
 
-    return string(e.getOwner());
+    return e.getOwner();
   }
   function getCandidateSize(address addr) public view returns (uint) {
     Election e = Election(addr);
@@ -79,10 +103,10 @@ contract ElectionFactory {
     return e.getVotedTo(_email);
   }
 
-  function getCandidate(address addr, uint i) public view returns (uint, string, uint) {
+  function getCandidate(address addr, uint i) public view returns (uint, string, string, string, uint) {
     Election e = Election(addr);
 
-    return (i, e.getCandidateName(i), e.getCandidateVoteCount(i));
+    return (i, e.getCandidateName(i), e.getCandidateImgURL(i), e.getCandidateDescription(i), e.getCandidateVoteCount(i));
   }
 
   function vote(address addr, bytes32 _email, uint _candidateId) public {
@@ -98,7 +122,7 @@ contract ElectionFactory {
 
     e.close(_email);
 
-    emit closedElection(addr, Type.bytes32ToStr(_email));
+    emit closedElection(addr, Library.bytes32ToStr(_email));
   }
   function getStartDate(address addr) public view returns (uint) {
     Election e = Election(addr);

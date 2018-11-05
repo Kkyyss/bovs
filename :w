@@ -1,0 +1,91 @@
+import React, { Component } from "react";
+import { Route, Switch, Redirect, withRouter } from "react-router-dom";
+import Home from "./component/home";
+import Voter from "./component/voter";
+import Login from "./component/login";
+import Logout from "./component/logout";
+import VoterPoll from "./component/voterpoll";
+import Organizer from "./component/organizer";
+import OrganizerCreate from "./component/organizercreate";
+import OrganizerPoll from "./component/organizerpoll";
+import AuthNavigation from "./component/AuthNavigation";
+import NotFound from "./component/404";
+import CreateVote from './component/organizercreate';
+import { ENDPOINTS } from './utils/config';
+
+
+class Routes extends Component {
+
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      ...this.props.state,
+      auth: false
+    }
+    await this.fetchAuth();
+  }
+
+  fetchAuth = async() => {
+    const token = localStorage.getItem('token');
+
+    if (token) {
+      const response = await fetch(ENDPOINTS + "/verification", {
+        credentials: 'same-origin',
+        method: 'GET',
+        headers: {
+          'Content-Type':'application/json',
+          'Authorization': 'Bearer ' + token
+        }
+      });
+      if (response.status === 200) {
+        this.setState({ auth: true });
+        return;
+      }
+    }
+    this.setState({ auth: false });
+  }
+
+  render() {
+    const { accounts, email } = this.state.user
+
+    // Navigate: Key features
+    const Nav = ({ navigation: Navigation, component: Component, ...rest }) => {
+      return (
+        <Navigation {...rest} >
+          <Component {...rest} />
+        </Navigation>
+      )
+    }
+
+    const AuthRoute = async({ component: Component, ...rest }) => {
+      return (
+        <Route {...rest} render={(props) =>
+            this.state.auth ? (
+              <Nav navigation={AuthNavigation} component={Component} {...props} state={this.state} />
+            ) : (
+              <Redirect to="/" />
+            )}
+        />
+      )
+    }
+
+    return (
+      <Switch>
+        <Route exact path="/" render={(props)=><Home {...props} state={this.state} />} />
+        <Route exact path="/login/:email/:role/:token" render={(props)=><Login {...props} state={this.state} />} />
+        <Route exact path="/login/voter/:email/:token/:addr" render={(props)=><Login {...props} state={this.state} />} />
+        <Route exact path="/logout" component={Logout} />
+        <AuthRoute exact path="/:userId/:email/:role/voter" component={Voter} />
+        <AuthRoute exact path="/:userId/:email/:role/voter/:electionId" component={VoterPoll} />
+        <AuthRoute exact path="/:userId/:email/:role/organizer" component={Organizer}/>
+        <AuthRoute exact path="/:userId/:email/:role/organizer/create" component={CreateVote} />
+        <AuthRoute exact path="/:userId/:email/:role/organizer/:electionId/vote-info" component={OrganizerPoll} />
+        <Route path="/404" render={(props)=><NotFound {...props} state={this.state} />} />
+        <Redirect from="*" to="/404" />
+      </Switch>
+    )
+  }
+}
+
+export default withRouter(Routes);

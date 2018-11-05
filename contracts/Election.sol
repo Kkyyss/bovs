@@ -1,11 +1,14 @@
 pragma solidity ^0.4.24;
+pragma experimental ABIEncoderV2;
 
-import "./Type.sol";
+import './Library.sol';
 
 contract Election {
   mapping(bytes32 => uint) public ownerId;
   bytes32 private owner;
-  bytes private title;
+  bytes32 private title;
+  bytes private imgURL;
+  bytes32 private description;
   uint private startDate;
   uint private endDate;
   uint public candSize;
@@ -23,6 +26,8 @@ contract Election {
   struct Candidate {
     uint id;
     string name;
+    string imgURL;
+    string description;
     uint voteCount;
   }
 
@@ -33,20 +38,26 @@ contract Election {
   }
 
   constructor (
-    bytes32 _owner, bytes _title, bool _public,
-    bytes32[] _candidates, bytes32[] _voters,
-    bool _manualStop, uint _start, uint _end
+    bytes32[3] _content, bytes _imgURL, bool[2] _setup,
+    bytes32[] _candidates,
+    string[] _cImg,
+    bytes32[] _candidatesDescription,
+    bytes32[] _voters, uint[2] _start_end
   ) public {
-    ownerId[_owner] = 1;
-    owner = _owner;
-    title = _title;
-    startDate = _start;
-    if (!_manualStop) {
-      endDate = _end;
+    ownerId[_content[0]] = 1;
+    owner = _content[0];
+    title = _content[1];
+    imgURL = _imgURL;
+    description = _content[2];
+    startDate = _start_end[0];
+    // Not closing manually
+    if (!_setup[0]) {
+      endDate = _start_end[1];
     }
-    addCandidates(_candidates);
+    addCandidates(_candidates, _cImg, _candidatesDescription);
 
-    if (!_public) {
+    // Whether is 'Public' or 'Private' mode
+    if (!_setup[1]) {
       mode = Mode.Private;
       addVoters(_voters);
     } else {
@@ -55,11 +66,18 @@ contract Election {
 
   }
 
-  function addCandidates(bytes32[] _names) private {
+  function addCandidates(bytes32[] _names,
+                         string[] _img,
+                         bytes32[] _description) private {
     candSize = _names.length;
 
     for (uint i = 0; i < candSize; i++) {
-      candidates[i] = Candidate(i, Type.bytes32ToStr(_names[i]), 0);
+      candidates[i] = Candidate(
+        i,
+        Library.bytes32ToStr(_names[i]),
+        _img[i],
+        Library.bytes32ToStr(_description[i]),
+        0);
     }
   }
 
@@ -68,7 +86,7 @@ contract Election {
 
     for (uint i = 0; i < votrSize; i++) {
       voterId[_emails[i]] = i + 1;
-      voters[_emails[i]] = Voter(i, Type.bytes32ToStr(_emails[i]), false);
+      voters[_emails[i]] = Voter(i, Library.bytes32ToStr(_emails[i]), false);
     }
   }
   function isVoter(bytes32 _email) public view returns (bool) {
@@ -89,7 +107,7 @@ contract Election {
       require(voterId[_email] != 0);
     } else {
       if (voterId[_email] == 0) {
-        voters[_email] = Voter(votrSize, Type.bytes32ToStr(_email), false);
+        voters[_email] = Voter(votrSize, Library.bytes32ToStr(_email), false);
         votrSize++;
       }
     }
@@ -116,14 +134,26 @@ contract Election {
   }
 
   function getTitle() public view returns (string) {
-    return string(title);
+    return Library.bytes32ToStr(title);
+  }
+  function getImgURL() public view returns (string) {
+    return string(imgURL);
+  }
+  function getDescription() public view returns (string) {
+    return Library.bytes32ToStr(description);
   }
   function getOwner() public view returns (string) {
-    return Type.bytes32ToStr(owner);
+    return Library.bytes32ToStr(owner);
   }
   // Candidate
   function getCandidateName(uint i) public view returns (string) {
     return candidates[i].name;
+  }
+  function getCandidateImgURL(uint i) public view returns (string) {
+    return string(candidates[i].imgURL);
+  }
+  function getCandidateDescription(uint i) public view returns (string) {
+    return candidates[i].description;
   }
   function getCandidateVoteCount(uint i) public view returns (uint) {
     return candidates[i].voteCount;
