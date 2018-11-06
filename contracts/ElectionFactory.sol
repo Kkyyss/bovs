@@ -84,6 +84,19 @@ contract ElectionFactory {
     }
     return (0, false);
   }
+  function isVoter(address addr, bytes32 _email) public view returns (bool) {
+    Election e = Election(addr);
+
+    if (e.getMode() == 1) {
+      return true;
+    }
+
+    if (e.isVoter(_email)) {
+      return true;
+    }
+
+    return false;
+  }
   function getOwnerElectionAddress(bytes32 _email, uint i) public view returns (address, bool) {
     Election e = Election(elections[i]);
 
