@@ -20,6 +20,7 @@ contract Election {
   mapping(uint => Candidate) private candidates;
   mapping(bytes32 => Voter) private voters;
   mapping(bytes32 => uint) private voterId;
+  mapping(uint => bytes32) private voterEmails;
   mapping(bytes32 => uint) private votedTo;
   mapping(bytes32 => uint) private pubVoterId;
 
@@ -86,6 +87,7 @@ contract Election {
 
     for (uint i = 0; i < votrSize; i++) {
       voterId[_emails[i]] = i + 1;
+      voterEmails[i] = _emails[i];
       voters[_emails[i]] = Voter(i, Library.bytes32ToStr(_emails[i]), false);
     }
   }
@@ -101,12 +103,17 @@ contract Election {
   function getVotedTo(bytes32 _email) public view returns (string) {
     return (candidates[votedTo[_email]].name);
   }
+  function getVoterEmail(uint i) public view returns (string) {
+    return Library.bytes32ToStr(voterEmails[i]);
+  }
 
   function vote (bytes32 _email, uint _candidateId) public {
     if (mode == Mode.Private) {
       require(voterId[_email] != 0);
     } else {
       if (voterId[_email] == 0) {
+        voterId[_email] = votrSize;
+        voterEmails[votrSize] = _email;
         voters[_email] = Voter(votrSize, Library.bytes32ToStr(_email), false);
         votrSize++;
       }

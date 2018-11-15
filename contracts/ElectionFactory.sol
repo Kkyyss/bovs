@@ -72,6 +72,11 @@ contract ElectionFactory {
 
     return e.votrSize();
   }
+  function getVoterEmail(address addr, uint i) public view returns (string) {
+    Election e = Election(addr);
+
+    return e.getVoterEmail(i);
+  }
   function getVoterElectionAddress(bytes32 _email, uint i) public view returns (address, bool) {
     Election e = Election(elections[i]);
 
