@@ -38,6 +38,7 @@ contract Election {
     bool voted;
   }
 
+  // Constructor that used to create Election object.
   constructor (
     bytes32[3] _content, bytes _imgURL, bool[2] _setup,
     bytes32[] _candidates,
@@ -45,34 +46,38 @@ contract Election {
     bytes32[] _candidatesDescription,
     bytes32[] _voters, uint[2] _start_end
   ) public {
-    ownerId[_content[0]] = 1;
-    owner = _content[0];
-    title = _content[1];
-    imgURL = _imgURL;
-    description = _content[2];
-    startDate = _start_end[0];
-    // Not closing manually
+    ownerId[_content[0]] = 1;   // Mark the organizer's email with 1, used for verification
+    owner = _content[0];        // Set the organizer's email
+    title = _content[1];        // Set the poll's title
+    imgURL = _imgURL;           // Set the poll's image URL
+    description = _content[2];  // Set the poll's description
+    startDate = _start_end[0];  // Set the poll's start date
+    // End date mode: Custom
     if (!_setup[0]) {
-      endDate = _start_end[1];
+      endDate = _start_end[1];  // Set the poll's end date
     }
+    // Add candidates
     addCandidates(_candidates, _cImg, _candidatesDescription);
 
-    // Whether is 'Public' or 'Private' mode
+    // Vote mode: Private
     if (!_setup[1]) {
-      mode = Mode.Private;
-      addVoters(_voters);
+      mode = Mode.Private;      // Set private mode
+      addVoters(_voters);       // Add voters
     } else {
-      mode = Mode.Public;
+      // Vote mode: Public
+      mode = Mode.Public;       // Set public mode
     }
-
   }
 
+  // Add candidates
   function addCandidates(bytes32[] _names,
                          string[] _img,
                          bytes32[] _description) private {
-    candSize = _names.length;
+    candSize = _names.length; // Set the candidate's size from the array of candidates' length
 
+    // To store the candidates into the array of candidates.
     for (uint i = 0; i < candSize; i++) {
+      // Assign the created Candidate object.
       candidates[i] = Candidate(
         i,
         Library.bytes32ToStr(_names[i]),
@@ -82,15 +87,18 @@ contract Election {
     }
   }
 
+  // Add voters
   function addVoters(bytes32[] _emails) private {
-    votrSize = _emails.length;
+    votrSize = _emails.length; // Set the coter's size from the array of voters' length
 
+    // To store the voters into the array of voters.
     for (uint i = 0; i < votrSize; i++) {
       voterId[_emails[i]] = i + 1;
       voterEmails[i] = _emails[i];
       voters[_emails[i]] = Voter(i, Library.bytes32ToStr(_emails[i]), false);
     }
   }
+
   function isVoter(bytes32 _email) public view returns (bool) {
     return (voterId[_email] != 0);
   }
@@ -106,21 +114,34 @@ contract Election {
   function getVoterEmail(uint i) public view returns (string) {
     return Library.bytes32ToStr(voterEmails[i]);
   }
-
+  /*
+   * The logic for the vote process.
+   * _email: voter's email.
+   * _candidateId: candidate's ID.
+   */
   function vote (bytes32 _email, uint _candidateId) public {
+    // Vote mode: Private
     if (mode == Mode.Private) {
+      // require the user's email is invited
       require(voterId[_email] != 0);
     } else {
+      // Vote mode: Public
+      // If the user's email is not registered
       if (voterId[_email] == 0) {
+        // To store the voter's ID, set the key with the voter's email.
         voterId[_email] = votrSize;
+        // To store the voter's email, indexing with the latest voter's size.
         voterEmails[votrSize] = _email;
+        // Assign the created voter object to the array of voters
         voters[_email] = Voter(votrSize, Library.bytes32ToStr(_email), false);
+        // Increment voter's size
         votrSize++;
       }
     }
 
+    // End date mode: Custom
     if (endDate != 0) {
-      // Due date
+      // require the current date is not more than or equal to the end date
       require(now < endDate);
     }
 
@@ -166,11 +187,13 @@ contract Election {
     return candidates[i].voteCount;
   }
   function close(bytes32 _email) public {
+    // require the owner is matched the organizer's email
     require(ownerId[_email] != 0);
 
-    // Is manual close
+    // require the end mode is 'Manually'
     require(endDate == 0);
 
+    // update the end date to the current date
     endDate = now;
   }
 
